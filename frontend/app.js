@@ -52,8 +52,14 @@ const ROUTES = {
 };
 const SUBTITLE = { student: null, buddy: (s) => `${s.firstName} (${s.title?.split('·')[0].trim()})`, counsellor: () => 'Counsellor Portal', admin: () => 'Safe Circle Node' };
 
-function mockBar() {
-  return api.MOCK ? `<div class="mockbar">Demo mode: synthetic data, no TideCloak connected yet. Nothing is really encrypted or enforced. <button data-act="reset">Reset demo</button></div>` : '';
+// Demo only: jump between synthetic profiles without signing out.
+const DEMO_USERS = api.MOCK ? await api.listDemoUsers() : [];
+
+function mockBar(s) {
+  if (!api.MOCK) return '';
+  const switcher = s ? `<label class="switcher">${icon('switch_account')} Viewing as
+    <select data-act="switch" aria-label="Switch demo profile">${DEMO_USERS.map((u) => `<option value="${u.id}" ${u.id === s.id ? 'selected' : ''}>${esc(u.label)} (${u.role})</option>`).join('')}</select></label>` : '';
+  return `<div class="mockbar"><span>Demo mode: synthetic data, no TideCloak connected yet. Nothing is really encrypted or enforced. <button data-act="reset">Reset demo</button></span>${switcher}</div>`;
 }
 
 function shell(s, current, body, badge = 0) {
@@ -61,7 +67,7 @@ function shell(s, current, body, badge = 0) {
     `<a href="#/${r}" ${r === current ? 'aria-current="page"' : ''}>${icon(ic, r === current)}<span>${label}</span>${r === 'alerts' && badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('');
   const sub = SUBTITLE[s.role]?.(s);
   app.innerHTML = `
-    ${mockBar()}
+    ${mockBar(s)}
     <header class="topbar">
       <div class="brand"><span class="logo">${icon('lock', true)}</span><div><div>Safe Circle${s.role === 'buddy' ? ' <span class="online"></span>' : ''}</div>${sub ? `<div class="sub">${icon('verified', true)} ${esc(sub)}</div>` : ''}</div></div>
       <div class="right">
@@ -80,6 +86,13 @@ app.addEventListener('click', async (e) => {
   if (act === 'logout') { await api.logout(); location.hash = '#/login'; }
   if (act === 'sos') sos();
   if (act === 'reset') { api.resetDemo(); location.hash = '#/login'; render(); }
+});
+
+app.addEventListener('change', async (e) => {
+  if (e.target.dataset.act !== 'switch') return;
+  const u = await api.login(e.target.value);
+  const home = '#/' + ROUTES[u.role][0][0];
+  if (location.hash === home) render(); else location.hash = home;
 });
 
 // ---------- login ----------

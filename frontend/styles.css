@@ -53,6 +53,10 @@ p { margin: 0; }
 
 .mockbar { background: var(--amber-soft); color: var(--amber); font-size: 12.5px; text-align: center; padding: 6px 12px; }
 .mockbar button { background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 0 4px; }
+.mockbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; }
+.switcher { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.switcher .icon { font-size: 18px; }
+.switcher select { width: auto; padding: 4px 10px; border-radius: 999px; background: #fff; border-color: #f1d79a; font-size: 13px; font-weight: 500; color: var(--text); }
 
 /* cards */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); display: grid; gap: 14px; }
