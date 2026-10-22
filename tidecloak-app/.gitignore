@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+build/
+
+# Secrets — operator credentials NEVER belong in the repo (AP-41).
+.env
+.env.local
+.env.*.local
+scripts/.skycloak-api-key
+
+# Local TideCloak state (adapter export + H2 volume)
+data/tidecloak.json
+data/keycloakdb*
+
+# PCB runtime data (notes ciphertext, receipts) and one-time invite links
+data/pcb/
+data/invite-links.txt
+
+# Re-include the template (the repo root ignores .env*)
+!.env.example
+node_modules
