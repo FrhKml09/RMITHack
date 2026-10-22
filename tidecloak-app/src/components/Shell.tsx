@@ -80,8 +80,26 @@ function Gate({ children, requires }: { children: React.ReactNode; requires?: Pe
       </div>
     );
   }
-  if (!s.persona) return <p className="status" aria-live="polite">Reading your roles from the signed token…</p>;
+  if (!s.persona) {
+    return s.rolesLoaded ? <NoRole /> : <p className="status" aria-live="polite">Reading your roles from the signed token…</p>;
+  }
   return <>{children}</>;
+}
+
+/** Signed in with Tide, but the token carries no pcb-* role yet (setup hasn't granted it). */
+export function NoRole() {
+  const s = useSession();
+  return (
+    <div className="notice">
+      <strong>Signed in, but no Safe Circle role yet</strong>
+      Your Tide sign-in worked, but this account hasn&apos;t been given a role (student, buddy, counsellor or committee).
+      Roles are granted at the end of <span className="mono">npm run init</span>, once all four invite links have been
+      linked. Ask whoever ran setup to finish it, then sign out and sign in again.
+      <div style={{ marginTop: "1rem" }}>
+        <button className="btn" onClick={s.logout}>Sign out</button>
+      </div>
+    </div>
+  );
 }
 
 export function SignIn() {

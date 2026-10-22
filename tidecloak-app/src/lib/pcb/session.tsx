@@ -10,6 +10,8 @@ export interface Session {
   mode: Mode;
   ready: boolean;
   authenticated: boolean;
+  /** True once /api/me has answered, so "no persona" means "no pcb-* role", not "still loading". */
+  rolesLoaded: boolean;
   sub: string | null;
   persona: Persona | null;
   roles: string[];
@@ -36,6 +38,7 @@ const LOADING: Session = {
   mode: "loading",
   ready: false,
   authenticated: false,
+  rolesLoaded: false,
   sub: null,
   persona: null,
   roles: [],
@@ -92,6 +95,7 @@ export function PcbProvider({ children }: { children: React.ReactNode }) {
 function TideBridge({ config, children }: { config: Record<string, unknown>; children: React.ReactNode }) {
   const tc = useTideCloak();
   const [me, setMe] = useState<Me | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const api = useCallback<Session["api"]>(
@@ -108,11 +112,13 @@ function TideBridge({ config, children }: { config: Record<string, unknown>; chi
   useEffect(() => {
     if (!tc.authenticated) {
       setMe(null);
+      setLoaded(false);
       return;
     }
     loadMe(api)
       .then((m) => setMe(m))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoaded(true));
   }, [tc.authenticated, tc.token, api]);
 
   const base = String(config["auth-server-url"] ?? "").replace(/\/+$/, "");
@@ -121,6 +127,7 @@ function TideBridge({ config, children }: { config: Record<string, unknown>; chi
       mode: "tide",
       ready: !tc.isInitializing,
       authenticated: tc.authenticated,
+      rolesLoaded: loaded,
       sub: me?.sub ?? (tc.authenticated ? tc.getValueFromToken("sub") : null),
       persona: me?.persona ?? null,
       roles: me?.roles ?? [],
@@ -144,7 +151,7 @@ function TideBridge({ config, children }: { config: Record<string, unknown>; chi
         setMe(await loadMe(api));
       },
     }),
-    [tc, me, error, api, base, config.realm],
+    [tc, me, loaded, error, api, base, config.realm],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -201,6 +208,7 @@ function RehearsalProvider({ children }: { children: React.ReactNode }) {
       mode: "rehearsal",
       ready,
       authenticated: Boolean(persona),
+      rolesLoaded: !persona || me !== null,
       sub: me?.sub ?? null,
       persona,
       roles: me?.roles ?? [],

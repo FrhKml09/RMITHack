@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Shell, SignIn } from "@/components/Shell";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { NoRole, Shell, SignIn } from "@/components/Shell";
 import { useSession } from "@/lib/pcb/session";
 import type { Persona } from "@/lib/pcb/personas";
 
@@ -14,6 +16,13 @@ const HOME: Record<Persona, { href: string; label: string }> = {
 
 export default function Home() {
   const s = useSession();
+  const router = useRouter();
+
+  // Signed in with a role: go straight to that person's page instead of waiting for a click.
+  useEffect(() => {
+    if (s.ready && s.authenticated && s.persona) router.replace(HOME[s.persona].href);
+  }, [s.ready, s.authenticated, s.persona, router]);
+
   return (
     <Shell>
       <div className="cols">
@@ -73,6 +82,10 @@ export default function Home() {
           <div style={{ marginTop: "2rem" }}>
             {s.ready && s.authenticated && s.persona ? (
               <Link className="btn" href={HOME[s.persona].href}>{HOME[s.persona].label} →</Link>
+            ) : s.ready && s.authenticated && !s.rolesLoaded ? (
+              <p className="status" aria-live="polite">Signing you in…</p>
+            ) : s.ready && s.authenticated ? (
+              <NoRole />
             ) : s.ready ? (
               <SignIn />
             ) : null}
