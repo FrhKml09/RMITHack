@@ -1,6 +1,6 @@
 # Safe Circle (PCB Safe Space)
 
-**Live UI demo:** https://frhkml09.github.io/RMITHack/frontend/ (synthetic data, mock backend)
+**Live UI demo:** https://frhkml09.github.io/RMITHack/ (synthetic data, mock backend)
 
 A peer-support app for Taylor's University Peer Counselling Buddies, where students talk to trained student buddies under an alias, and no single admin, counsellor, developer or server can read their notes, unmask them, or grant themselves access.
 
@@ -25,29 +25,83 @@ A peer-support app for Taylor's University Peer Counselling Buddies, where stude
 
 **Answer to the open question below:** the TideCloak build doesn't need a custom "buddy + 1 counsellor" rule. The three programme admins (buddy lead, registered counsellor, committee member) are TideCloak realm admins, and Tide's own quorum is `floor(0.7 × 3)` = 2. So any 2 of the 3 must approve, which covers the duty-of-care escalation with no Forseti policy.
 
-## `frontend/`: demo mode
+## How to run
 
-`frontend/` is a complete UI running on a **mock** backend (`frontend/api.js`, synthetic data in localStorage). The mock imitates the rules but **does not enforce anything**: nothing is really encrypted, and a yellow banner says so on every screen. The real enforcement lives in `tidecloak-app/`.
+### Part 1: `frontend/` (full UI, mock data)
 
-### Run it
+**Quickest:** open the live demo, https://frhkml09.github.io/RMITHack/. Nothing to install.
 
-No install needed (Node 18+):
+**Or locally.** Requirements: Node 18+. No `npm install` needed.
 
 ```bash
 node frontend/serve.mjs
 ```
 
-Open http://localhost:5173. Click **Sign in with TideCloak**, then pick a synthetic user. Use **Reset demo** in the banner to restore the seed data.
+Open http://localhost:5173.
 
-### Demo script (acceptance tests)
+**Test logins:** click **Try the demo**, then pick a synthetic user. All data is synthetic, with no passwords.
 
-1. **Student Blue-17** (Aisha) writes a note on Reflect.
-2. **Ben Ong** → My students → Student Blue-17: reads the note and sees only the alias.
-3. **Chloe Lee**: no students, so no access.
-4. **IT Admin** → Overview: users shown by alias, notes shown as ciphertext. Request role grant "counsellor" for IT Admin → *Pending 0/2*.
-5. **Dr Lim** and **Ms Tan** → Approvals: each approves → approved (Approve/Reject buttons).
-6. **Ben** → Escalate to counsellor (reason) → **Dr Lim** approves → Escalated cases shows the real name. **Aisha** → Alerts shows who got access and why.
-7. **IT Admin** → Request offboarding for Ben → 2 counsellor approvals → **Ben** has no access.
+| User | Role | Notes |
+|---|---|---|
+| Student Blue-17 | student | Aisha's alias. Her real name is hidden from everyone else by default |
+| Ben Ong | buddy | Assigned to Student Blue-17 and Student Green-04 |
+| Chloe Lee | buddy | Not assigned to anyone |
+| Dr Lim, Ms Tan | counsellor | Approve requests |
+| IT Admin | admin | Can only submit requests |
+
+Once signed in, switch person with the **Viewing as** dropdown in the yellow bar. **Reset demo** in the same bar restores the starting data.
+
+**What to click (acceptance tests):**
+
+1. **Student Blue-17** → *Reflect*: write a note → *Send privately to your Buddy*.
+2. **Ben Ong** → *Students*: reads the note; sees only "Student Blue-17", never the name.
+3. **Chloe Lee**: "No students assigned to you".
+4. **IT Admin** → *Overview*: students shown by alias only; *Stored notes* shows ciphertext. *Assign buddy / Request role* → grant `counsellor` to IT Admin → **0 of 2**, pending.
+5. **Dr Lim**, then **Ms Tan** → *Approvals* → **Approve** each → 2 of 2, approved.
+6. **Ben** → *Escalate to counsellor* (enter a reason) → 1 of 2. **Dr Lim** → *Approvals* → Approve → *Cases* shows the real name. **Student Blue-17** → *Transparency* / *Alerts* shows who got access and why.
+7. **IT Admin** → *Request offboarding* for Ben → Dr Lim + Ms Tan approve → **Ben** no longer sees any students.
+
+### Part 2: `tidecloak-app/` (real TideCloak)
+
+Requirements: Docker (running), Node 20.9+, `curl`, `jq`, bash, and a Tide licence email you control. Full details are in [`tidecloak-app/README.md`](tidecloak-app/README.md).
+
+```bash
+cd tidecloak-app
+npm install
+cp .env.example .env    # set KC_BOOTSTRAP_ADMIN_PASSWORD
+TIDE_LICENSE_EMAIL=you@example.com TIDE_TERMS_ACCEPTED=yes npm run init
+npm run dev             # http://localhost:3000
+```
+
+**Test logins:** there are no shared passwords. `npm run init` prints one invite link per person (counsellor first, then buddy, committee, student) and saves them to `data/invite-links.txt`. Open **each link in its own private/incognito window** and create that person's Tide account. Keep the init terminal open: it waits until all four are linked, then writes `data/tidecloak.json`, and the app switches from rehearsal to real Tide mode.
+
+**What to click:** see "Demo moments" in [`tidecloak-app/README.md`](tidecloak-app/README.md):
+- the student writes a note;
+- the committee member's *What the server holds* page shows ciphertext only;
+- the committee member granting himself `pcb-breakglass` stays at **1 of 2**;
+- buddy + counsellor approve, and the escalation desk opens.
+
+Without the init step, `npm run dev` runs in **rehearsal mode**, labelled on every screen.
+
+## Mocked / simulated functionality
+
+**`frontend/` is entirely mocked.** The yellow "Demo mode" bar is on every screen.
+
+- **Login:** a picker of synthetic users, not TideCloak. The *Sign in with TideCloak* button opens `tidecloak-app` at `localhost:3000`, which only works on the machine running it.
+- **Encryption:** nothing is encrypted. "Ciphertext" is random bytes generated for display. Notes are stored as plain text in the browser's localStorage.
+- **Access rules and approvals:** the per-case roles, 2-counsellor approvals, escalation (buddy + 1 counsellor) and offboarding are simulated in JavaScript (`frontend/api.js`). Nothing enforces them.
+- **Real identity:** stored in plain text in the mock. The UI only shows names where the rules allow.
+- **Notifications and access history:** generated by the mock and labelled "App-logged (demo)". They are not tamper-proof.
+- **SOS:** shows real Malaysian crisis numbers (999, Befrienders KL, Talian HEAL 15555) but contacts nobody.
+
+**`tidecloak-app/` is real when set up, with these exceptions:**
+
+- **Rehearsal mode** (when TideCloak isn't set up): approvals are simulated and keys live in the browser. Every screen says so.
+- **Student receipts:** written by our server and labelled "logged by Safe Circle". The approvals themselves are recorded by TideCloak.
+- **Shared decryption:** a note can only be decrypted by its writer (Tide self-encryption). Letting the buddy and counsellor decrypt a student's note needs a Forseti policy and is on the roadmap.
+- **Storage:** a local JSON file (`data/pcb/`), not a database.
+
+**Differences between the two parts:** the mock shows "buddy + 1 counsellor" for escalation and "2 counsellors" for assignments. The real build enforces any 2 of 3 programme admins (buddy lead, counsellor, committee member) for every access change.
 
 ## Backend handoff
 
