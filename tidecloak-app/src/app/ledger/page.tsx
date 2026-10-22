@@ -54,7 +54,7 @@ function Ledger() {
       <p className="eyebrow">What the server holds</p>
       <h1 className="page">This is the whole database. Go ahead and read it.</h1>
       <p className="lede">
-        Anyone who runs PCB, or steals a copy of it, gets exactly this. Notes are sealed by the person who wrote them.
+        Anyone who runs Safe Circle, or steals a copy of it, gets exactly this. Notes are sealed by the person who wrote them.
         People appear as random IDs.
       </p>
       <hr className="rule" />

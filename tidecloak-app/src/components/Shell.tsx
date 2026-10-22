@@ -27,8 +27,8 @@ export function Shell({ children, requires }: { children: React.ReactNode; requi
         </div>
       )}
       <header className="masthead">
-        <Link href="/" className="wordmark" aria-label="PCB home">
-          <b>PCB</b>
+        <Link href="/" className="wordmark" aria-label="Safe Circle home">
+          <b>Safe Circle</b>
           <span>Peer Counselling Buddies</span>
         </Link>
         <nav className="nav" aria-label="Sections">
@@ -92,7 +92,7 @@ export function SignIn() {
         <p className="eyebrow">Sign in</p>
         <h2 id="signin">Your Tide key stays with you.</h2>
         <p className="small">
-          Tide checks your password across a network of independent nodes. PCB never sees it, never stores a hash of it,
+          Tide checks your password across a network of independent nodes. Safe Circle never sees it, never stores a hash of it,
           and only learns a random ID for you.
         </p>
         <button className="btn" onClick={s.login}>Sign in with Tide</button>

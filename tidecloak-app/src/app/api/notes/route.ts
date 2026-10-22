@@ -67,7 +67,7 @@ export const POST = route(async (req, caller) => {
       actorPersona: caller.persona,
       action: caller.persona === "student" ? "You sealed a journal entry" : "Your buddy sealed a session note",
       outcome: "allowed",
-      enforcedBy: "tide",
+      enforcedBy: caller.mode === "tide" ? "tide" : "app",
     });
     return n;
   });

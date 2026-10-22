@@ -20,10 +20,11 @@ async function gate(req: NextRequest): Promise<Caller> {
         actorPersona: caller.persona,
         action: "Someone tried to open the escalation desk without a quorum-approved grant",
         outcome: "refused",
-        enforcedBy: "tide",
+        enforcedBy: caller.mode === "tide" ? "tide" : "app",
       }),
     );
-    throw new HttpError(403, `Refused. Your Tide-signed token does not carry ${BREAKGLASS_ROLE}.`, {
+    const holder = caller.mode === "tide" ? "Your Tide-signed token" : "Your rehearsal session";
+    throw new HttpError(403, `Refused. ${holder} does not carry ${BREAKGLASS_ROLE}.`, {
       required: BREAKGLASS_ROLE,
       tokenRoles: caller.roles.filter((r) => r.startsWith("pcb-")),
       mode: caller.mode,
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
         actorPersona: caller.persona,
         action: "A quorum-approved counsellor opened the escalation desk",
         outcome: "allowed",
-        enforcedBy: "tide",
+        enforcedBy: caller.mode === "tide" ? "tide" : "app",
       });
       return st;
     });
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
         actorPersona: caller.persona,
         action: "A counsellor reached out to your circle after two people approved",
         outcome: "allowed",
-        enforcedBy: "tide",
+        enforcedBy: caller.mode === "tide" ? "tide" : "app",
       });
       return c;
     });

@@ -48,9 +48,9 @@ function TideConsole() {
   return (
     <div className="cols">
       <section>
-        <h2>Votes are cast in TideCloak, not in PCB</h2>
+        <h2>Votes are cast in TideCloak, not in Safe Circle</h2>
         <p>
-          PCB has no approve button on purpose. Each admin signs their vote in their own Tide enclave, and the Tide
+          Safe Circle has no approve button on purpose. Each admin signs their vote in their own Tide enclave, and the Tide
           network seals it. Our server can&apos;t cast a vote, can&apos;t count one twice, and can&apos;t skip the count.
         </p>
         <ol className="margin-notes" style={{ marginTop: "1.4rem" }}>
@@ -78,7 +78,7 @@ function TideConsole() {
       </section>
       <aside className="panel">
         <p className="eyebrow">Your signed token right now</p>
-        <p className="mono" style={{ margin: 0 }}>{s.roles.join(", ") || "no PCB roles"}</p>
+        <p className="mono" style={{ margin: 0 }}>{s.roles.join(", ") || "no Safe Circle roles"}</p>
         <p className="figure-note">Roles can take up to two minutes to appear after the second approval.</p>
       </aside>
     </div>
@@ -113,7 +113,7 @@ function Rehearsal() {
         <div className="notice wait">
           <strong>Rehearsal stand-in</strong>
           In the live build these votes are TideCloak change requests signed in each admin&apos;s Tide enclave. Here our
-          server counts them, which is exactly the kind of trust PCB exists to remove.
+          server counts them, which is exactly the kind of trust Safe Circle exists to remove.
         </div>
         <h2 style={{ marginTop: "1.6rem" }}>Requests</h2>
         {reqs.length === 0 ? (
@@ -157,7 +157,7 @@ function Rehearsal() {
             </button>
           ))}
         </div>
-        <p className="figure-note">Your token now: {s.roles.join(", ") || "no PCB roles"}</p>
+        <p className="figure-note">Your token now: {s.roles.join(", ") || "no Safe Circle roles"}</p>
       </aside>
     </div>
   );

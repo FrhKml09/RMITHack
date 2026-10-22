@@ -71,7 +71,7 @@ a:hover { color: var(--clay); }
 }
 
 .wordmark { text-decoration: none; display: flex; align-items: baseline; gap: .7rem; }
-.wordmark b { font-weight: 600; font-size: 1.9rem; letter-spacing: -.02em; font-style: italic; }
+.wordmark b { white-space: nowrap; font-weight: 600; font-size: 1.9rem; letter-spacing: -.02em; font-style: italic; }
 .wordmark span { font-family: var(--sans); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
 
 .nav { display: flex; gap: 1.4rem; font-family: var(--sans); font-size: 14px; flex-wrap: wrap; }

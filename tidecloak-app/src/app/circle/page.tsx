@@ -86,7 +86,7 @@ function Circle() {
         Circle <span className="mono" style={{ fontSize: ".7em" }}>{shortSubject(s.sub)}</span>
       </h1>
       <p className="lede">
-        PCB knows you by a random ID. Not your name, not your email, not your student number. What you write here is
+        Safe Circle knows you by a random ID. Not your name, not your email, not your student number. What you write here is
         sealed on this device before it leaves.
       </p>
 

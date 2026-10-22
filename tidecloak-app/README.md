@@ -1,86 +1,49 @@
-# Tide E2EE Vault
+# Safe Circle: TideCloak build
 
-End-to-end encrypted vault app powered by Tide. Users encrypt secrets in their browser via Tide's threshold cryptography — the server only ever sees ciphertext. Only the encrypting user can decrypt their own data.
+The working TideCloak version of Safe Circle's core rule: **nobody joins a student's circle alone.** Next.js 16 + `@tidecloak/nextjs`.
 
-## Quick start
+## What Tide enforces here
+
+| Moment | Who enforces it |
+|---|---|
+| Sign-in with no password hash stored anywhere (PRISM across Tide's ORK network) | Tide |
+| The app knows a student only by their random Tide subject (`7f3a·9c1e`), never a name or email | Tide |
+| Notes are encrypted in the writer's browser (`doEncrypt`); the server and admins hold ciphertext only (`/ledger`) | Tide |
+| Decrypting needs the live ORK network to check the role in the signed token; there is no offline key to steal | Tide |
+| A committee member grants himself `pcb-breakglass`: the change request sits at **1 of 2** in TideCloak's QEA console | Tide (quorum = `floor(0.7 × 3 admins)` = 2) |
+| `/escalation` is refused until the Tide-signed token carries `pcb-breakglass` | Tide signs the token; our API checks it |
+| Tokens are DPoP-bound, so a stolen token is useless without the browser's key | Tide + our API |
+| Flare (crisis assistant) only files a request with circle ID + risk level, never the student's words | Our code |
+| Receipts shown to the student | Our code, labelled "logged by Safe Circle" |
+
+## Run it
+
+Rehearsal (no Tide network, for practising the demo; every screen says so):
 
 ```bash
 npm install
-npm run init    # starts TideCloak, creates realm with E2EE roles, exports config
+npm run dev            # http://localhost:3000, pick a persona
+```
+
+Real Tide mode (needs Docker and a Tide licence email you control):
+
+```bash
+cp .env.example .env   # set KC_BOOTSTRAP_ADMIN_PASSWORD
+TIDE_LICENSE_EMAIL=you@example.com TIDE_TERMS_ACCEPTED=yes npm run init
 npm run dev
 ```
 
-`npm run init` requires Docker, curl, and jq. It will:
+`npm run init` creates the realm, enables quorum governance with the Tide attestor, writes `data/tidecloak.json` and prints one invite link per person (student, buddy, counsellor, committee). Each person opens their link and creates a Tide account. Once `data/tidecloak.json` exists, the app switches to Tide mode automatically and rehearsal is disabled.
 
-1. Start a TideCloak dev container
-2. Create a realm with `_tide_vault.selfencrypt` and `_tide_vault.selfdecrypt` roles
-3. Enable IGA, create admin user, generate invite link
-4. Wait for you to link your Tide account (open the printed link in your browser)
-5. Export `data/tidecloak.json`
+## Demo moments
 
-After init, `npm run dev` starts the app at `http://localhost:3000`.
+1. **The database is useless.** Student writes in *My circle*. Committee opens *What the server holds* and sees only ciphertext.
+2. **The grab fails.** Committee grants himself `pcb-breakglass` in the Tide console and approves it: **1 of 2**. *Escalation desk* still refuses him.
+3. **Help still arrives.** On the buddy desk, Flare spots crisis language and files a flare; buddy and counsellor approve the counsellor's grant (2 of 2). The counsellor refreshes the token and the desk opens. The student sees the receipt.
 
-## How it works
+## Limits we state openly
 
-### Self-encryption (user-bound E2EE)
-
-- **Encrypt**: User types a secret, clicks "Encrypt & Store". The Tide SDK calls `doEncrypt()` which sends the data to the ORK threshold network. The ORKs encrypt using the user's identity-bound key. The ciphertext is sent to the server for storage.
-- **Decrypt**: User clicks "Decrypt" on a stored entry. The SDK calls `doDecrypt()` which requires live participation of T-of-N ORKs. Plaintext is recovered only in the user's browser.
-- **Server never sees plaintext**. The API stores and returns ciphertext only.
-
-### Security properties
-
-| Property | How |
-|----------|-----|
-| Threshold encryption | T-of-N ORKs must participate; no single party holds the key |
-| User-bound | Only the encrypting user can decrypt (identity-bound via PRISM) |
-| No offline decrypt | Decryption requires live Fabric access |
-| No server-side decrypt | Server stores ciphertext; cannot decrypt |
-| DPoP token binding | Tokens bound to client key pair; prevents replay |
-| Server-side JWT verification | API routes verify JWT signature + claims before accepting data |
-
-## Project structure
-
-```
-src/
-  app/
-    page.tsx                  # Home page with login
-    vault/page.tsx            # Vault UI — encrypt, decrypt, manage secrets
-    auth/redirect/page.tsx    # OIDC callback handler
-    api/vault/route.ts        # Server-side vault API (ciphertext storage)
-    providers.tsx             # TideCloakContextProvider with DPoP
-    layout.tsx                # Root layout
-  lib/auth/
-    tidecloakConfig.ts        # Load adapter JSON (data/tidecloak.json)
-    tideJWT.ts                # Server-side JWT verification with embedded JWKS
-    middleware.ts             # withAuth() and withRole() helpers
-scripts/
-  init-tidecloak.sh           # TideCloak bootstrap script
-  realm.json.template         # Realm template with E2EE roles
-data/
-  tidecloak.json              # Adapter config (generated by init, gitignored)
-public/
-  silent-check-sso.html       # Required for silent token refresh
-```
-
-## Prerequisites
-
-- Node.js 18+
-- Docker (for `npm run init`)
-- curl and jq (for `npm run init`)
-
-## E2EE roles
-
-The realm template includes these roles in the default composite (all users get them):
-
-| Role | Purpose |
-|------|---------|
-| `_tide_vault.selfencrypt` | Voucher gate: enables encrypt operations for tag "vault" |
-| `_tide_vault.selfdecrypt` | Voucher gate: enables decrypt operations for tag "vault" |
-| `_tide_enabled` | Required for all Tide operations |
-
-## Limitations
-
-- **Filesystem storage**: The vault API uses JSON files in `data/vault/`. Data survives dev hot reload but is not production-grade. Replace with a database for production.
-- **Self-encryption only**: This app demonstrates user-bound encryption. For shared encryption where multiple users can decrypt, use policy-governed VVK encryption with Forseti contracts (see `setup-forseti-e2ee` playbook).
-- **Dev image only**: `tideorg/tidecloak-dev` uses an embedded H2 database. Not for production.
+- Our server can still delete or withhold ciphertext, or serve modified front-end code. Roadmap: signed front-end builds.
+- Notes use Tide self-encryption: only the writer can decrypt. Shared student + buddy decryption needs a Forseti policy and is on the roadmap.
+- The TideCloak master admin can change realm settings; keep it offline and out of the app.
+- Storage is a JSON file in `data/pcb/` (gitignored). Swap for a database in production.

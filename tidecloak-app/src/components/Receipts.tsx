@@ -24,7 +24,7 @@ export function Receipts({ rows }: { rows: ReceiptRow[] }) {
             {r.action}
             <span className="by">
               {r.actorPersona ? PERSONA_LABEL[r.actorPersona].title : "Unknown"} {shortSubject(r.actorSub)} ·{" "}
-              {r.enforcedBy === "tide" ? "enforced by the Tide network" : "logged by PCB"}
+              {r.enforcedBy === "tide" ? "enforced by the Tide network" : "logged by Safe Circle"}
             </span>
           </span>
           <span className={`stamp ${r.outcome}`}>{OUTCOME[r.outcome]}</span>

@@ -39,7 +39,7 @@ export default function Home() {
               blackmailed the patients one by one. One server held everything, so one breach exposed everything.
             </li>
             <li>
-              PCB keeps each student&apos;s notes sealed to the person who wrote them. Anyone else who wants in, even a
+              Safe Circle keeps each student&apos;s notes sealed to the person who wrote them. Anyone else who wants in, even a
               counsellor in a crisis, needs two of three people to agree, and the Tide network enforces that, not our
               code.
             </li>
@@ -65,7 +65,7 @@ export default function Home() {
               <tr><td>A committee member</td><td className="no">No</td></tr>
               <tr><td>IT, or whoever copies the database</td><td className="no">No</td></tr>
               <tr><td>Flare, the crisis assistant</td><td className="no">No. It can only ask.</td></tr>
-              <tr><td>Us, the people who built PCB</td><td className="no">No</td></tr>
+              <tr><td>Us, the people who built Safe Circle</td><td className="no">No</td></tr>
             </tbody>
           </table>
           <p className="figure-note">Buddies are trained, supervised peers, not counsellors. A registered counsellor is one of the three voters.</p>

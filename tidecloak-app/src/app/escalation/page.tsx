@@ -78,7 +78,7 @@ function Escalation() {
             <table className="access" aria-label="What the server checked">
               <tbody>
                 <tr><td>Needed</td><td className="mono">{refused.required ?? BREAKGLASS_ROLE}</td></tr>
-                <tr><td>Your token carries</td><td className="mono">{(refused.tokenRoles ?? []).join(", ") || "no PCB roles"}</td></tr>
+                <tr><td>Your token carries</td><td className="mono">{(refused.tokenRoles ?? []).join(", ") || "no Safe Circle roles"}</td></tr>
                 <tr><td>Who signed the token</td><td>{s.mode === "tide" ? "Tide network (threshold signature)" : "Rehearsal server"}</td></tr>
               </tbody>
             </table>

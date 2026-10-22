@@ -8,15 +8,24 @@ A peer-support app for Taylor's University Peer Counselling Buddies, where stude
 
 **Value.** Students get a buddy who knows them only by an alias. Buddies can still get counsellor support on serious cases, and the student is told who gained access and why.
 
-**Why TideCloak.** Notes are encrypted per student case and can only be decrypted by holders of that case's role. Granting a role goes through Quorum-Enforced Governance: a change request that counsellors must approve, so no single admin can approve their own change. Approvals are signed and logged by TideCloak, which gives a tamper-evident access history.
+**Why TideCloak.** Notes are encrypted in the writer's browser through the Tide network, so the server, IT and admins only ever hold ciphertext, and no password hash exists anywhere. Every access change is a TideCloak change request that needs 2 of 3 programme admins, each signing in their own Tide enclave. One admin alone stays stuck at 1 of 2, and the Tide network won't sign a token carrying a role the quorum hasn't approved, so not even our own server can hand out access.
 
-**Prototype.** Student, buddy, counsellor and admin dashboards. Encrypted notes, aliases by default, a ciphertext-only admin view, a 2-counsellor approval queue, escalation (buddy + 1 counsellor), buddy offboarding, and a "who can see my notes / my name" panel with an access history.
+**Prototype.** `frontend/`: the full product UX (student, buddy, counsellor and admin dashboards, aliases, approval queue, escalation, offboarding, "who can see my notes" panel). `tidecloak-app/`: a working TideCloak build of the core rule, with real Tide login, encrypted notes, and a quorum-gated crisis escalation.
 
 ---
 
-## Status: frontend only (demo mode)
+## Two parts
 
-`frontend/` is a complete UI running on a **mock** backend (`frontend/api.js`, synthetic data in localStorage). The mock imitates the rules but **does not enforce anything**: nothing is really encrypted, and a yellow banner says so on every screen. The real enforcement comes from TideCloak and is being built by the backend teammate.
+| Folder | What it is | Enforcement |
+|---|---|---|
+| `tidecloak-app/` | Next.js + `@tidecloak/nextjs`. Tide login, browser-side encryption, DPoP-bound tokens, quorum-gated escalation desk. See [`tidecloak-app/README.md`](tidecloak-app/README.md). | **Real**, via TideCloak and the Tide network |
+| `frontend/` | The full UX on a mock API, for the screens not yet wired to Tide. | Mock (yellow banner on every screen) |
+
+**Answer to the open question below:** the TideCloak build doesn't need a custom "buddy + 1 counsellor" rule. The three programme admins (buddy lead, registered counsellor, committee member) are TideCloak realm admins, and Tide's own quorum is `floor(0.7 × 3)` = 2. So any 2 of the 3 must approve, which covers the duty-of-care escalation with no Forseti policy.
+
+## `frontend/`: demo mode
+
+`frontend/` is a complete UI running on a **mock** backend (`frontend/api.js`, synthetic data in localStorage). The mock imitates the rules but **does not enforce anything**: nothing is really encrypted, and a yellow banner says so on every screen. The real enforcement lives in `tidecloak-app/`.
 
 ### Run it
 
