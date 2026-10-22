@@ -41,6 +41,14 @@ Open http://localhost:5173.
 
 **Test logins:** click **Try the demo**, then pick a synthetic user. All data is synthetic, with no passwords.
 
+**Real TideCloak sign-in (optional):** put the client adapter JSON exported from your realm at `frontend/tidecloak.json`. The **Sign in with TideCloak** button then logs in against TideCloak from this page and comes back here; **Try the demo** keeps working next to it. Without the file the button is disabled. After sign-in the data is still the mock: each user sees the seeded profile for their realm role (`pcb-student` → Student Blue-17, `pcb-buddy` → Ben, `pcb-counsellor` → Dr Lim, `pcb-admin` or `pcb-committee` → IT Admin).
+
+Use a separate public client for this frontend (standard flow, PKCE S256, **no** "DPoP bound tokens": there's no resource server to check DPoP proofs, and GitHub Pages can't serve `tide_dpop_auth.html` with the headers it needs). Register:
+- Valid redirect URIs: `http://localhost:5173/*`, `https://frhkml09.github.io/RMITHack/frontend/*`
+- Web origins: `http://localhost:5173`, `https://frhkml09.github.io`
+
+Visitors can only sign in if their browser can reach the TideCloak server in `tidecloak.json`. A server on `localhost:8080` works only on the machine running it; for everyone else, put TideCloak on a public HTTPS address.
+
 | User | Role | Notes |
 |---|---|---|
 | Student Blue-17 | student | Aisha's alias. Her real name is hidden from everyone else by default |
@@ -87,7 +95,7 @@ Without the init step, `npm run dev` runs in **rehearsal mode**, labelled on eve
 
 **`frontend/` is entirely mocked.** The yellow "Demo mode" bar is on every screen.
 
-- **Login:** a picker of synthetic users, not TideCloak. The *Sign in with TideCloak* button opens `tidecloak-app` at `localhost:3000`, which only works on the machine running it.
+- **Login:** *Try the demo* is a picker of synthetic users. *Sign in with TideCloak* is real TideCloak login when `frontend/tidecloak.json` is present (see Part 1), but the data behind it is still this mock.
 - **Encryption:** nothing is encrypted. "Ciphertext" is random bytes generated for display. Notes are stored as plain text in the browser's localStorage.
 - **Access rules and approvals:** the per-case roles, 2-counsellor approvals, escalation (buddy + 1 counsellor) and offboarding are simulated in JavaScript (`frontend/api.js`). Nothing enforces them.
 - **Real identity:** stored in plain text in the mock. The UI only shows names where the rules allow.

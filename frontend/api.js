@@ -7,7 +7,12 @@
 // screens behave the way they will once the real backend is wired in.
 //
 // Backend TODO per function is marked "TIDECLOAK:".
+//
+// Login is the exception: "Sign in with TideCloak" is REAL TideCloak whenever frontend/tidecloak.json
+// (the client adapter JSON exported from your realm) is served next to this file. See "auth" below.
+// The demo user picker stays available either way.
 
+// MOCK = the data layer (notes, requests, alerts) is still the localStorage mock.
 export const MOCK = true;
 
 const KEY = 'safecircle-mock-v2';
@@ -77,7 +82,7 @@ const commit = () => save(db);
 const uid = () => Math.random().toString(36).slice(2, 9);
 const delay = (v) => new Promise((r) => setTimeout(() => r(v), 120));
 const has = (user, role) => db.grants.some((g) => g.user === user && g.role === role);
-const me = () => USERS.find((u) => u.id === db.session);
+const me = () => USERS.find((u) => u.id === sessionId());
 const user = (id) => USERS.find((u) => u.id === id);
 
 function need(roleName) {
@@ -93,15 +98,153 @@ function displayFor(viewer, studentId) {
 }
 
 // ---------- auth ----------
-// TIDECLOAK: replace with TideCloak login (IAMService / useTideCloak) and read roles from the token.
+// Two ways in, side by side on the login screen:
+//  - Try the demo: pick a synthetic user. No account, nothing enforced.
+//  - Sign in with TideCloak: real TideCloak login from this page. Available when ./tidecloak.json (the
+//    client adapter JSON exported from the realm) is served next to this file.
+// The SDK is @tidecloak/js 0.14.41, vendored as one self-contained ESM file so the page never loads
+// auth code from a third-party CDN at runtime. Source: https://esm.sh/@tidecloak/js@0.14.41/es2022/js.bundle.mjs
+// (sha256 226f3cd7fd19362c7366af8e2d0da2012bd7836d8f7459e72632d1c31f7f4ae4).
+
+// Realm role -> app role. First match wins, same order as tidecloak-app/src/lib/pcb/personas.ts.
+// pcb-committee counts as admin so the realm from tidecloak-app/scripts/realm.json.template works as-is.
+const REALM_ROLES = [
+  ['pcb-student', 'student'],
+  ['pcb-buddy', 'buddy'],
+  ['pcb-counsellor', 'counsellor'],
+  ['pcb-admin', 'admin'],
+  ['pcb-committee', 'admin'],
+];
+
+// Until the data layer is real, a signed-in TideCloak user drives the seeded profile for their role
+// (every pcb-student sees Aisha's synthetic case, and so on).
+const SEED_PROFILE = { student: 'aisha', buddy: 'ben', counsellor: 'drlim', admin: 'admin' };
+
+// Set while a TideCloak session may exist, so a reload restores it without a click.
+const TIDE_FLAG = 'safecircle-tide';
+
+let tideConfig = null;   // parsed tidecloak.json, or null when this deployment has no TideCloak
+let iam = null;          // IAMService, set only once TideCloak initialised without error
+let authProblem = null;  // why real login can't proceed right now, shown on the login screen
+
+async function loadTideConfig() {
+  let res;
+  try { res = await fetch(new URL('tidecloak.json', import.meta.url), { cache: 'no-store' }); } catch { return null; }
+  if (!res.ok) return null;
+  try { return await res.json(); } catch {
+    authProblem = 'tidecloak.json is not valid JSON. Re-export the client adapter config from TideCloak.';
+    return null;
+  }
+}
+
+// Starts the SDK. Only runs when needed (coming back from TideCloak, an earlier TideCloak session, or a
+// click on the button), so demo visitors never wait on a TideCloak server they can't reach.
+async function startTide() {
+  if (iam) return true;
+  const server = String(tideConfig['auth-server-url'] || '').replace(/\/+$/, '');
+  // The SDK just sits out its timeouts when the server is down, so probe first and say so plainly.
+  try {
+    await fetch(`${server}/realms/${encodeURIComponent(tideConfig.realm)}/.well-known/openid-configuration`,
+      { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(5000) });
+  } catch {
+    authProblem = `Can't reach the TideCloak server (${server}) from this device. Use Try the demo, or sign in from a device that can reach it.`;
+    return false;
+  }
+  const { IAMService } = await import('./vendor/tidecloak-js-0.14.41.js');
+  let failed = false;
+  IAMService
+    .on('initError', (_e, err) => {
+      failed = true;
+      authProblem = `Couldn't start TideCloak login (${err?.message || err}). Check that the TideCloak client lists ${location.origin} under Web origins and this page under Valid redirect URIs.`;
+    })
+    .on('authError', (_e, err) => { authProblem = `TideCloak sign-in failed: ${err?.message || err}`; });
+  const base = new URL('./', import.meta.url);
+  // Come back to this page, not the SDK default <origin>/auth/redirect, which is wrong under a
+  // sub-path such as GitHub Pages' /RMITHack/frontend/. The SDK reads the code from the URL fragment
+  // during init (before app.js routes) and strips it. No DPoP: there is no resource server to
+  // check proofs yet. Add "useDPoP" to tidecloak.json once there is; it is passed through.
+  try {
+    await IAMService.initIAM({
+      ...tideConfig,
+      redirectUri: base.href,
+      silentCheckSsoRedirectUri: new URL('silent-check-sso.html', base).href,
+    });
+  } catch (err) {
+    failed = true;
+    authProblem ??= `Couldn't start TideCloak login (${err?.message || err}).`;
+  }
+  if (failed) return false;
+  iam = IAMService;
+  return true;
+}
+
+// keycloak-js returns with "#state=...&code=..." (or "&error=...") in the fragment.
+const returningFromTide = () => /(^#|&)state=/.test(location.hash) && /&(code|error)=/.test(location.hash);
+
+tideConfig = await loadTideConfig();
+// Top-level await: app.js runs only after the login callback is handled.
+if (tideConfig && (returningFromTide() || localStorage.getItem(TIDE_FLAG))) {
+  await startTide();
+  if (!iam?.isLoggedIn()) localStorage.removeItem(TIDE_FLAG);
+}
+
+// True when this deployment has real TideCloak sign-in configured.
+export const TIDE = Boolean(tideConfig);
+
+const tideRole = () => REALM_ROLES.find(([realmRole]) => iam.hasRealmRole(realmRole)); // [realmRole, appRole] | undefined
+
+function sessionId() {
+  if (iam?.isLoggedIn()) return SEED_PROFILE[tideRole()?.[1]] ?? null;
+  return db.session;
+}
+
+export function authState() {
+  return { tide: TIDE, problem: authProblem, signedIn: Boolean(iam?.isLoggedIn()) };
+}
+
 export async function listDemoUsers() { return delay(USERS.filter((u) => u.id !== 'farid').map(({ id, role, name, alias }) => ({ id, role, label: role === 'student' ? alias : name }))); }
-export async function login(id) { db.session = id; commit(); return delay(me()); }
-export async function logout() { db.session = null; commit(); return delay(true); }
+
+// login(id): demo session as that synthetic user. login() with no id: real TideCloak sign-in.
+export async function login(id) {
+  if (id !== undefined) { db.session = id; commit(); return delay(me()); }
+  if (!TIDE) throw new Error(authProblem || "TideCloak sign-in isn't set up on this site yet (frontend/tidecloak.json is missing). Use Try the demo.");
+  if (!(await startTide())) throw new Error(authProblem);
+  db.session = null; commit();
+  localStorage.setItem(TIDE_FLAG, '1');
+  if (iam.isLoggedIn()) return me(); // an existing TideCloak session was picked up silently
+  iam.doLogin();
+  return new Promise(() => {}); // the browser is leaving for TideCloak
+}
+
+export async function logout() {
+  if (iam?.isLoggedIn()) {
+    localStorage.removeItem(TIDE_FLAG);
+    iam.doLogout();
+    return new Promise(() => {}); // TideCloak ends the session and redirects back here
+  }
+  db.session = null; commit(); return delay(true);
+}
+
 export async function getSession() {
+  let tide = null;
+  if (iam?.isLoggedIn()) {
+    // Refreshes an expiring token, so role changes (e.g. offboarding) show up within one token lifetime.
+    try { await iam.getToken(); } catch {
+      localStorage.removeItem(TIDE_FLAG);
+      authProblem = 'Your TideCloak session has ended. Sign in again.';
+      return null;
+    }
+    const match = tideRole();
+    if (!match) {
+      authProblem = `Signed in to TideCloak as ${iam.getName()}, but this account has none of the Safe Circle roles (${REALM_ROLES.map(([r]) => r).join(', ')}). Ask a realm admin to grant one, then sign in again.`;
+      return null;
+    }
+    tide = { username: iam.getName(), realmRole: match[0] };
+  }
   const u = me();
   if (!u) return null;
   // A student sees their own alias in the UI; real name is never shown to others by default.
-  return { id: u.id, role: u.role, displayName: u.role === 'student' ? u.alias : u.name, firstName: u.name.split(' ')[0], title: u.title };
+  return { id: u.id, role: u.role, displayName: u.role === 'student' ? u.alias : u.name, firstName: u.name.split(' ')[0], title: u.title, tide };
 }
 
 // ---------- notes ----------

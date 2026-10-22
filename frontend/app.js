@@ -1,4 +1,4 @@
-import * as api from './api.js';
+import * as api from './api.js?v=6';
 
 const app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -52,19 +52,21 @@ const ROUTES = {
 };
 const SUBTITLE = { student: null, buddy: (s) => `${s.firstName} (${s.title?.split('·')[0].trim()})`, counsellor: () => 'Counsellor Portal', admin: () => 'Safe Circle Node' };
 
-// The TideCloak build (tidecloak-app) runs locally on the machine hosting TideCloak.
-const TIDE_APP_URL = 'http://localhost:3000';
-const REPO_URL = 'https://github.com/FrhKml09/RMITHack';
-const TIDE_BADGE = api.MOCK ? `<span class="pill outline">${icon('science')} Demo · TideCloak build in tidecloak-app</span>` : `<span class="pill outline">${icon('lock')} Protected by TideCloak</span>`;
+const tideBadge = (s) => s?.tide
+  ? `<span class="pill outline">${icon('lock')} Signed in with TideCloak</span>`
+  : `<span class="pill outline">${icon('science')} Demo · not signed in with TideCloak</span>`;
 
-// Demo only: jump between synthetic profiles without signing out.
-const DEMO_USERS = api.MOCK ? await api.listDemoUsers() : [];
+// Demo only: jump between synthetic profiles without signing out. Hidden for TideCloak sessions.
+const DEMO_USERS = await api.listDemoUsers();
 
 function mockBar(s) {
   if (!api.MOCK) return '';
-  const switcher = s ? `<label class="switcher">${icon('switch_account')} Viewing as
+  const switcher = s && !s.tide ? `<label class="switcher">${icon('switch_account')} Viewing as
     <select data-act="switch" aria-label="Switch demo profile">${DEMO_USERS.map((u) => `<option value="${u.id}" ${u.id === s.id ? 'selected' : ''}>${esc(u.label)} (${u.role})</option>`).join('')}</select></label>` : '';
-  return `<div class="mockbar"><span>Demo mode: synthetic data, no TideCloak connected yet. Nothing is really encrypted or enforced. <button data-act="reset">Reset demo</button></span>${switcher}</div>`;
+  const text = s?.tide
+    ? `Signed in with TideCloak as ${esc(s.tide.username)} (${esc(s.tide.realmRole)}). Notes, approvals and alerts are still synthetic demo data in this browser: nothing is encrypted or enforced yet.`
+    : 'Demo mode: synthetic data, no TideCloak connected yet. Nothing is really encrypted or enforced.';
+  return `<div class="mockbar"><span>${text} <button data-act="reset">Reset demo</button></span>${switcher}</div>`;
 }
 
 function shell(s, current, body, badge = 0) {
@@ -102,7 +104,8 @@ app.addEventListener('change', async (e) => {
 
 // ---------- login ----------
 async function loginView() {
-  const users = await api.listDemoUsers();
+  const users = DEMO_USERS;
+  const auth = api.authState();
   app.innerHTML = `
     ${mockBar()}
     <main class="wrap login">
@@ -126,9 +129,12 @@ async function loginView() {
         <div class="divider"><span>or</span></div>
         <div class="stack">
           <h3>${icon('lock', true)} Real TideCloak sign-in</h3>
-          <p class="small muted">The real login, encrypted notes and 2-of-3 approvals run in our TideCloak build (<span class="mono">tidecloak-app</span>). It runs on the computer hosting TideCloak, so this button only works there.</p>
+          <p class="small muted">${auth.tide
+            ? 'Sign in with your Tide account. Your realm role decides whether you land as a student, buddy, counsellor or admin. The notes and approvals you see after that are still demo data.'
+            : "TideCloak sign-in isn't set up on this site yet. Use the demo above."}</p>
         </div>
-        <button class="btn ghost block" id="tide">${icon('fingerprint')} Sign in with TideCloak</button>
+        ${auth.problem ? `<div class="note-box" role="alert">${icon('error')}<span>${esc(auth.problem)}</span></div>` : ''}
+        <button class="btn ghost block" id="tide" ${auth.tide ? '' : 'disabled'}>${icon('fingerprint')} ${auth.signedIn ? 'Sign out of TideCloak' : 'Sign in with TideCloak'}</button>
         <button class="linkbtn" data-act="sos">${icon('call')} View emergency crisis numbers without signing in</button>
       </section>
       <h3 class="section-title">${icon('shield', true)} Safe Circle privacy architecture</h3>
@@ -143,16 +149,16 @@ async function loginView() {
         <div class="chips center small"><a href="tel:999">${icon('call')} 999 Emergency</a><a href="tel:0376272929">${icon('call')} Befrienders KL</a><a href="tel:15555">${icon('call')} Talian HEAL 15555</a></div>
       </div>
     </main>`;
-  app.querySelector('#tide').onclick = () => modal(`
-    <h2>${icon('lock', true)} Real TideCloak sign-in</h2>
-    <p>The real Tide login, encrypted notes and 2-of-3 approvals run in our TideCloak build, <span class="mono">tidecloak-app</span>. It needs Docker and a Tide realm set up on the machine that runs it, so it can't run from this website.</p>
-    <div class="list">
-      <a class="row clickable" href="${REPO_URL}" target="_blank" rel="noopener"><span class="bubble">${icon('smart_display')}</span><div class="grow"><h3>Watch it in our demo video</h3><p class="small muted">video.mp4 in the GitHub repo</p></div>${icon('open_in_new')}</a>
-      <a class="row clickable" href="${REPO_URL}#part-2-tidecloak-app-real-tidecloak" target="_blank" rel="noopener"><span class="bubble">${icon('terminal')}</span><div class="grow"><h3>Run it yourself</h3><p class="small muted">README → How to run → Part 2</p></div>${icon('open_in_new')}</a>
-      <a class="row clickable" href="${TIDE_APP_URL}" target="_blank" rel="noopener"><span class="bubble">${icon('computer')}</span><div class="grow"><h3>Already running it?</h3><p class="small muted">Open tidecloak-app at localhost:3000</p></div>${icon('open_in_new')}</a>
-    </div>
-    <p class="small muted">To explore every screen here, use <b>Try the demo</b> (synthetic data).</p>
-    <button class="btn primary" data-close>Got it</button>`);
+  // Real TideCloak: redirects to TideCloak and back to this page (or signs out an account with no Safe Circle role).
+  app.querySelector('#tide').onclick = async () => {
+    try {
+      if (auth.signedIn) return await api.logout();
+      const u = await api.login();
+      if (u) location.hash = '#/' + ROUTES[u.role][0][0]; else render();
+    } catch (e) {
+      if (api.authState().problem) render(); else toast(e.message);
+    }
+  };
   app.querySelector('#demo').onclick = () => { app.querySelector('#pick').hidden = false; app.querySelector('#pick').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
   app.querySelectorAll('[data-user]').forEach((b) => b.onclick = async () => {
     const u = await api.login(b.dataset.user);
@@ -188,7 +194,7 @@ async function studentReflect(s) {
     <div class="status"><span><span class="dot"></span>${esc(s.displayName)}</span><span class="pill green">${icon('shield')} Alias Mode Active</span></div>
     <div><h1>Hi, ${esc(s.displayName)}</h1>
       <p class="muted" style="margin-top:6px">Your notes can only be read by you and your current buddy. Your buddy only knows you by this alias.</p>
-      <div style="margin-top:10px">${TIDE_BADGE}</div></div>
+      <div style="margin-top:10px">${tideBadge(s)}</div></div>
     <section class="card">
       <div class="card-head"><div class="title"><span class="bubble">${icon('favorite')}</span><div><h2>Share what's on your heart</h2><p class="small muted">Private peer reflection</p></div></div>${icon('verified_user')}</div>
       <div><p class="small" style="margin-bottom:8px">Select a focus (optional):</p>
@@ -471,7 +477,7 @@ async function adminView(s) {
     <section class="card tint">
       <div class="title"><span class="bubble">${icon('admin_panel_settings')}</span><h2>System admin – you manage the system, not the stories</h2></div>
       <p class="small muted">You can create accounts and submit requests. You can't read notes, see who's behind an alias, or grant access on your own.</p>
-      ${TIDE_BADGE}
+      ${tideBadge(s)}
     </section>
     <section class="card warn">
       <div class="card-head"><h3>${icon('warning', true)} Multi-sig guard</h3><span class="pill amber">${reqs.length} pending</span></div>
