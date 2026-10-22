@@ -54,6 +54,7 @@ const SUBTITLE = { student: null, buddy: (s) => `${s.firstName} (${s.title?.spli
 
 // The TideCloak build (tidecloak-app) runs locally on the machine hosting TideCloak.
 const TIDE_APP_URL = 'http://localhost:3000';
+const REPO_URL = 'https://github.com/FrhKml09/RMITHack';
 const TIDE_BADGE = api.MOCK ? `<span class="pill outline">${icon('science')} Demo · TideCloak build in tidecloak-app</span>` : `<span class="pill outline">${icon('lock')} Protected by TideCloak</span>`;
 
 // Demo only: jump between synthetic profiles without signing out.
@@ -127,7 +128,7 @@ async function loginView() {
           <h3>${icon('lock', true)} Real TideCloak sign-in</h3>
           <p class="small muted">The real login, encrypted notes and 2-of-3 approvals run in our TideCloak build (<span class="mono">tidecloak-app</span>). It runs on the computer hosting TideCloak, so this button only works there.</p>
         </div>
-        <a class="btn ghost block" href="${TIDE_APP_URL}" target="_blank" rel="noopener">${icon('fingerprint')} Sign in with TideCloak ${icon('open_in_new')}</a>
+        <button class="btn ghost block" id="tide">${icon('fingerprint')} Sign in with TideCloak</button>
         <button class="linkbtn" data-act="sos">${icon('call')} View emergency crisis numbers without signing in</button>
       </section>
       <h3 class="section-title">${icon('shield', true)} Safe Circle privacy architecture</h3>
@@ -142,6 +143,16 @@ async function loginView() {
         <div class="chips center small"><a href="tel:999">${icon('call')} 999 Emergency</a><a href="tel:0376272929">${icon('call')} Befrienders KL</a><a href="tel:15555">${icon('call')} Talian HEAL 15555</a></div>
       </div>
     </main>`;
+  app.querySelector('#tide').onclick = () => modal(`
+    <h2>${icon('lock', true)} Real TideCloak sign-in</h2>
+    <p>The real Tide login, encrypted notes and 2-of-3 approvals run in our TideCloak build, <span class="mono">tidecloak-app</span>. It needs Docker and a Tide realm set up on the machine that runs it, so it can't run from this website.</p>
+    <div class="list">
+      <a class="row clickable" href="${REPO_URL}" target="_blank" rel="noopener"><span class="bubble">${icon('smart_display')}</span><div class="grow"><h3>Watch it in our demo video</h3><p class="small muted">video.mp4 in the GitHub repo</p></div>${icon('open_in_new')}</a>
+      <a class="row clickable" href="${REPO_URL}#part-2-tidecloak-app-real-tidecloak" target="_blank" rel="noopener"><span class="bubble">${icon('terminal')}</span><div class="grow"><h3>Run it yourself</h3><p class="small muted">README → How to run → Part 2</p></div>${icon('open_in_new')}</a>
+      <a class="row clickable" href="${TIDE_APP_URL}" target="_blank" rel="noopener"><span class="bubble">${icon('computer')}</span><div class="grow"><h3>Already running it?</h3><p class="small muted">Open tidecloak-app at localhost:3000</p></div>${icon('open_in_new')}</a>
+    </div>
+    <p class="small muted">To explore every screen here, use <b>Try the demo</b> (synthetic data).</p>
+    <button class="btn primary" data-close>Got it</button>`);
   app.querySelector('#demo').onclick = () => { app.querySelector('#pick').hidden = false; app.querySelector('#pick').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
   app.querySelectorAll('[data-user]').forEach((b) => b.onclick = async () => {
     const u = await api.login(b.dataset.user);

@@ -1,0 +1,40 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0\fswiss Calibri;}}
+\f0\fs22
+{\pard\sa120\b\fs36 Safe Circle (PCB Safe Space)\par}
+{\pard\sa200\i Peer support for Taylor's University Peer Counselling Buddies, built with TideCloak.\par}
+
+{\pard\sa60\b Live demo:\b0  https://frhkml09.github.io/RMITHack/\par}
+{\pard\sa60\b Source code:\b0  https://github.com/FrhKml09/RMITHack\par}
+{\pard\sa240\b Demo video:\b0  video.mp4 in the repository\par}
+
+{\pard\sa120\b\fs26 One-sentence description\par}
+{\pard\sa240 A peer-support app where students talk to trained student buddies under an alias, and no single admin, counsellor, developer or server can read their notes, unmask them, or grant themselves access.\par}
+
+{\pard\sa120\b\fs26 Vision\par}
+{\pard\sa240 Any student can reach out about depression, family or personal problems without first having to trust one person, or one system, with their story and their name.\par}
+
+{\pard\sa120\b\fs26 Trust constraint\par}
+{\pard\sa240 Today, whoever runs the system (an admin, IT, or the app's builder) can read every note and see who is behind every alias. That fear stops students from asking for help.\par}
+
+{\pard\sa120\b\fs26 Value\par}
+{\pard\sa240 Students get a buddy who knows them only by an alias. Buddies can still get counsellor support on serious cases, and the student is always told who gained access and why.\par}
+
+{\pard\sa120\b\fs26 Why TideCloak\par}
+{\pard\sa240 Notes are encrypted in the writer's browser through the Tide network, so the server, IT and admins only ever hold ciphertext, and no password hash exists anywhere. Every access change is a TideCloak change request that needs 2 of 3 programme admins, each signing in their own Tide enclave. One admin alone stays stuck at 1 of 2, and the Tide network will not sign a token carrying a role the quorum has not approved, so not even our own server can hand out access.\par}
+
+{\pard\sa120\b\fs26 Prototype\par}
+{\pard\sa120 The repository has two parts:\par}
+{\pard\li360\sa60 - \b frontend/\b0 : the full product experience (student, buddy, counsellor and admin dashboards, aliases, approvals queue, escalation, buddy offboarding, and a "who can see my notes" panel). It runs on synthetic data and is clearly labelled as a demo.\par}
+{\pard\li360\sa240 - \b tidecloak-app/\b0 : the working TideCloak build of the core rule, with real Tide login, browser-side encryption, DPoP-bound tokens, and a quorum-gated crisis escalation.\par}
+
+{\pard\sa120\b\fs26 What is real and what is mocked\par}
+{\pard\li360\sa60 - Real (tidecloak-app, once set up): Tide login, encrypted notes the server cannot read, and the 2-of-3 approval enforced by TideCloak.\par}
+{\pard\li360\sa60 - Mocked (frontend): login picker, encryption, approvals and notifications are simulated in the browser. A yellow banner says so on every screen.\par}
+{\pard\li360\sa240 - Not yet built: shared decryption (letting the buddy and counsellor decrypt a student's note needs a Forseti policy), and tamper-proof student receipts (approvals are recorded by TideCloak; receipts are app-logged).\par}
+
+{\pard\sa120\b\fs26 Future work\par}
+{\pard\sa240 Shared decryption with Forseti policy, appointment booking, auto-expiry of notes after a case closes, passkey/biometric unlock, screenshot deterrents, and real university integration.\par}
+
+{\pard\sa60\i All data in this prototype is synthetic.\par}
+}

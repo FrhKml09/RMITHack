@@ -1,0 +1,16 @@
+Section,Answer
+Project,Safe Circle (PCB Safe Space)
+Live demo,https://frhkml09.github.io/RMITHack/
+Source code,https://github.com/FrhKml09/RMITHack
+Demo video,video.mp4 in the repository
+One-sentence description,"A peer-support app where students talk to trained student buddies under an alias, and no single admin, counsellor, developer or server can read their notes, unmask them, or grant themselves access."
+Vision,"Any student can reach out about depression, family or personal problems without first having to trust one person, or one system, with their story and their name."
+Trust constraint,"Today, whoever runs the system (an admin, IT, or the app's builder) can read every note and see who is behind every alias. That fear stops students from asking for help."
+Value,"Students get a buddy who knows them only by an alias. Buddies can still get counsellor support on serious cases, and the student is always told who gained access and why."
+Why TideCloak,"Notes are encrypted in the writer's browser through the Tide network, so the server, IT and admins only ever hold ciphertext, and no password hash exists anywhere. Every access change is a TideCloak change request that needs 2 of 3 programme admins, each signing in their own Tide enclave. One admin alone stays stuck at 1 of 2, and the Tide network will not sign a token carrying a role the quorum has not approved, so not even our own server can hand out access."
+Prototype,"frontend/: the full product experience (student, buddy, counsellor and admin dashboards, aliases, approvals queue, escalation, offboarding, who-can-see-my-notes panel) on synthetic data, labelled as a demo. tidecloak-app/: the working TideCloak build with real Tide login, browser-side encryption, DPoP-bound tokens and a quorum-gated crisis escalation."
+Real,"tidecloak-app once set up: Tide login, encrypted notes the server cannot read, 2-of-3 approval enforced by TideCloak."
+Mocked,"frontend: login picker, encryption, approvals and notifications are simulated in the browser; a yellow banner says so on every screen."
+Not yet built,"Shared decryption for buddy and counsellor (needs Forseti policy); tamper-proof student receipts (approvals are recorded by TideCloak, receipts are app-logged)."
+Future work,"Shared decryption with Forseti, appointment booking, auto-expiry of notes after a case closes, passkey/biometric unlock, screenshot deterrents, real university integration."
+Data,All data in this prototype is synthetic.
