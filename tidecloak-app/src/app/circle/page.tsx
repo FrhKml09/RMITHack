@@ -1,166 +1,153 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Shell, when } from "@/components/Shell";
-import { Receipts, type ReceiptRow } from "@/components/Receipts";
+import { Shell, day } from "@/components/Shell";
+import { Receipts, type LogRow } from "@/components/Receipts";
 import { useSession } from "@/lib/pcb/session";
-import { shortSubject } from "@/lib/pcb/personas";
+import { NoteList, type CaseNote } from "@/components/NoteList";
 
-interface Note { id: string; ciphertext: string; createdAt: string }
-interface CheckIn { id: string; body: string; createdAt: string }
+interface CaseView {
+  circle: string;
+  alias: string;
+  buddyRequested: boolean;
+  buddy: { name: string; until: string } | null;
+  access: { who: string; why: string; until?: string }[];
+  notes: CaseNote[];
+  requests: { id: string; summary: string; reason: string; status: string; approvals: { name: string }[]; quorum: number; filedByName: string }[];
+  log: LogRow[];
+}
 
 export default function CirclePage() {
   return (
     <Shell requires={["student"]}>
-      <Circle />
+      <StudentDashboard />
     </Shell>
   );
 }
 
-function Circle() {
+function StudentDashboard() {
   const s = useSession();
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
-  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
-  const [flareOptIn, setFlareOptIn] = useState(false);
+  const [cv, setCv] = useState<CaseView | null>(null);
   const [draft, setDraft] = useState("");
-  const [open, setOpen] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await s.api("/api/notes");
-    if (!r.ok) return setStatus((await r.json()).error ?? "Could not load your circle.");
+    const r = await s.api("/api/case");
     const d = await r.json();
-    setNotes(d.notes);
-    setCheckIns(d.checkIns);
-    setReceipts(d.receipts);
-    setFlareOptIn(d.flareOptIn);
+    if (!r.ok) return setStatus(d.error ?? "Could not load your space.");
+    setCv(d);
   }, [s]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  async function seal() {
-    if (!draft.trim()) return;
+  async function seal(kind: "journal" | "request") {
+    if (!cv || !draft.trim()) return;
     setBusy(true);
-    setStatus(s.mode === "tide" ? "Sealing with your Tide key…" : "Sealing with this browser's rehearsal key…");
+    setStatus(s.mode === "tide" ? "Locking it with your Tide key…" : "Locking it in this browser…");
     try {
-      const ciphertext = await s.encrypt(draft.trim());
-      const r = await s.api("/api/notes", { method: "POST", body: JSON.stringify({ ciphertext }) });
+      const ciphertext = await s.encrypt(draft.trim(), cv.circle);
+      const r = await s.api("/api/notes", { method: "POST", body: JSON.stringify({ ciphertext, kind }) });
       if (!r.ok) throw new Error((await r.json()).error);
+      if (kind === "request") {
+        const q = await s.api("/api/case", { method: "POST", body: JSON.stringify({ action: "request-buddy" }) });
+        if (!q.ok) throw new Error((await q.json()).error);
+      }
       setDraft("");
-      setStatus("Sealed. The server stored ciphertext only.");
+      setStatus(kind === "request" ? "Sent. The server stored scrambled text only. You'll be matched with a buddy." : "Locked and saved. The server stored scrambled text only.");
       await load();
     } catch (e) {
-      setStatus(`Could not seal: ${e instanceof Error ? e.message : e}`);
+      setStatus(`Could not save: ${e instanceof Error ? e.message : e}`);
     } finally {
       setBusy(false);
     }
   }
 
-  async function reveal(n: Note) {
-    setStatus("Opening…");
-    try {
-      const pt = await s.decrypt(n.ciphertext);
-      setOpen((o) => ({ ...o, [n.id]: pt }));
-      setStatus("");
-    } catch (e) {
-      setStatus(`Could not open: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-
-  async function toggleFlare(on: boolean) {
-    const r = await s.api("/api/circle", { method: "POST", body: JSON.stringify({ flareOptIn: on }) });
-    if (r.ok) {
-      setFlareOptIn(on);
-      load();
-    }
-  }
+  if (!cv) return <p className="status" aria-live="polite">{status || "Opening your space…"}</p>;
+  const noBuddy = !cv.buddy && !cv.buddyRequested;
+  const pending = cv.requests.filter((r) => r.status === "pending");
 
   return (
     <>
-      <p className="eyebrow">My circle</p>
-      <h1 className="page">
-        Circle <span className="mono" style={{ fontSize: ".7em" }}>{shortSubject(s.sub)}</span>
-      </h1>
+      <p className="eyebrow">My space</p>
+      <h1 className="page">Hi{s.name ? ` ${s.name}` : ""}. This is yours.</h1>
       <p className="lede">
-        Safe Circle knows you by a random ID. Not your name, not your email, not your student number. What you write here is
-        sealed on this device before it leaves.
+        Everyone else, including your buddy and the admins, sees you as <span className="mono">{cv.alias}</span>. Never your
+        name, email or student number. What you write is locked on this device before it leaves.
       </p>
 
       <hr className="rule" />
 
       <div className="cols">
         <section aria-labelledby="write">
-          <h2 id="write">Write it down</h2>
-          <label className="field" htmlFor="draft">Only you can open what you seal here.</label>
-          <textarea
-            id="draft"
-            rows={6}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="What's been on your mind this week?"
-          />
+          {noBuddy ? (
+            <>
+              <h2 id="write">Request a buddy</h2>
+              <label className="field" htmlFor="draft">A few lines about what&apos;s going on. Only you and the buddy you&apos;re matched with can read it.</label>
+            </>
+          ) : (
+            <>
+              <h2 id="write">Write a note</h2>
+              <label className="field" htmlFor="draft">Only the people in the panel on the right can read this.</label>
+            </>
+          )}
+          <textarea id="draft" rows={5} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="What's been on your mind this week?" />
           <div className="row" style={{ marginTop: ".8rem" }}>
-            <button className="btn" onClick={seal} disabled={busy || !draft.trim()}>Seal and save</button>
+            <button className="btn" onClick={() => seal(noBuddy ? "request" : "journal")} disabled={busy || !draft.trim()}>
+              {noBuddy ? "Request a buddy" : "Lock and save"}
+            </button>
           </div>
           <p className="status" aria-live="polite">{status}</p>
 
-          <h2 style={{ marginTop: "2.2rem" }}>Sealed entries</h2>
-          {notes.length === 0 ? (
-            <p className="small">Nothing yet.</p>
-          ) : (
-            <ul className="entries">
-              {[...notes].reverse().map((n) => (
-                <li key={n.id}>
-                  <div className="entry-meta">
-                    <span>{new Date(n.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
-                    {open[n.id] ? (
-                      <button className="btn link" onClick={() => setOpen(({ [n.id]: _, ...rest }) => rest)}>Close</button>
-                    ) : (
-                      <button className="btn link" onClick={() => reveal(n)}>Open</button>
-                    )}
-                  </div>
-                  {open[n.id] ? <p className="plain">{open[n.id]}</p> : <p className="cipher" aria-label="Sealed text">{n.ciphertext}</p>}
-                </li>
-              ))}
-            </ul>
+          {cv.buddyRequested && !cv.buddy && (
+            <div className="notice wait">
+              <strong>Waiting for a match</strong>An admin will match you with a trained peer buddy. They can match you, but they can&apos;t read anything you wrote.
+            </div>
           )}
+
+          <h2 style={{ marginTop: "2rem" }}>Notes in your case</h2>
+          <NoteList notes={cv.notes} circle={cv.circle} />
         </section>
 
         <aside>
           <div className="panel">
-            <p className="eyebrow">Flare</p>
-            <label className="toggle">
-              <input type="checkbox" checked={flareOptIn} onChange={(e) => toggleFlare(e.target.checked)} />
-              <span>
-                Let Flare watch my buddy&apos;s notes for signs I&apos;m not safe.
-                <span className="small" style={{ display: "block", marginTop: ".3rem" }}>
-                  Flare runs on your buddy&apos;s device. If it worries, it raises a flag with your circle ID and a
-                  level. Never your words. It can ask for help; it can never grant itself access.
-                </span>
-              </span>
-            </label>
+            <p className="eyebrow">Who can see my notes</p>
+            <table className="access" aria-label="Who can see my notes">
+              <tbody>
+                {cv.access.map((a) => (
+                  <tr key={a.who}>
+                    <td><b>{a.who}</b><br /><span className="small">{a.why}{a.until ? ` Access ends ${day(a.until)}.` : ""}</span></td>
+                    <td className="yes">Can read</td>
+                  </tr>
+                ))}
+                <tr><td>Admins, IT, the committee</td><td className="no">Scrambled text only</td></tr>
+                <tr><td>Other buddies and counsellors</td><td className="no">No</td></tr>
+              </tbody>
+            </table>
+            <p className="figure-note">
+              {cv.access.length === 1 ? "Only you, for now." : cv.access.length === 2 ? "Only you and your buddy." : "Anyone added beyond your buddy needed two approvals."}{" "}
+              Anyone new needs two people to approve, and you&apos;re told why.
+            </p>
           </div>
 
-          {checkIns.length > 0 && (
+          {pending.length > 0 && (
             <div className="panel inset">
-              <p className="eyebrow">Someone reached out</p>
-              {checkIns.map((c) => (
-                <div key={c.id} style={{ marginBottom: ".8rem" }}>
-                  <p style={{ margin: 0 }}>{c.body}</p>
-                  <p className="figure-note">A counsellor, {when(c.createdAt)}, after two people approved.</p>
-                </div>
+              <p className="eyebrow">Waiting for approval</p>
+              {pending.map((r) => (
+                <p key={r.id} style={{ margin: "0 0 .6rem" }}>
+                  {r.filedByName} asked to {r.summary.replace(/^share/, "share")}. <span className="small">Reason: {r.reason}. {r.approvals.length} of {r.quorum} approvals.</span>
+                </p>
               ))}
             </div>
           )}
 
           <div style={{ marginTop: "2rem" }}>
-            <h2>Receipts</h2>
-            <p className="small">Everything that has touched your circle. You see this whether or not it worked.</p>
-            <Receipts rows={receipts} />
+            <h2>Notifications</h2>
+            <p className="small">Everything that has touched your case, including attempts that were refused. <Link href="/log">Full access log</Link></p>
+            <Receipts rows={cv.log.slice(0, 12)} />
           </div>
         </aside>
       </div>

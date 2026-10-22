@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/pcb/session";
-import { PERSONA_LABEL, PERSONAS, shortSubject, type Persona } from "@/lib/pcb/personas";
+import { IDENTITIES, IDENTITY_KEYS, PERSONA_LABEL, shortSubject, type Persona } from "@/lib/pcb/personas";
 
 const NAV: { href: string; label: string; for: Persona[] }[] = [
-  { href: "/circle", label: "My circle", for: ["student"] },
-  { href: "/desk", label: "Buddy desk", for: ["buddy"] },
-  { href: "/escalation", label: "Escalation desk", for: ["buddy", "counsellor", "committee"] },
-  { href: "/approvals", label: "Two-person rule", for: ["buddy", "counsellor", "committee"] },
-  { href: "/ledger", label: "What the server holds", for: ["counsellor", "committee"] },
+  { href: "/circle", label: "My space", for: ["student"] },
+  { href: "/desk", label: "My students", for: ["buddy"] },
+  { href: "/desk", label: "My cases", for: ["counsellor"] },
+  { href: "/admin", label: "Admin console", for: ["committee"] },
+  { href: "/approvals", label: "Approvals", for: ["buddy", "counsellor", "committee"] },
+  { href: "/log", label: "Access log", for: ["student", "buddy", "counsellor", "committee"] },
+  { href: "/ledger", label: "Raw database", for: ["counsellor", "committee"] },
 ];
 
 export function Shell({ children, requires }: { children: React.ReactNode; requires?: Persona[] }) {
@@ -23,13 +25,13 @@ export function Shell({ children, requires }: { children: React.ReactNode; requi
       <a className="skip" href="#main">Skip to content</a>
       {s.mode === "rehearsal" && (
         <div className="rehearsal-strip" role="note">
-          Rehearsal — not connected to the Tide network. Keys live in this browser; approvals are simulated.
+          Rehearsal: not connected to the Tide network. Our server hands out case keys and counts votes here; the Tide build moves both to TideCloak.
         </div>
       )}
       <header className="masthead">
-        <Link href="/" className="wordmark" aria-label="Safe Circle home">
-          <b>Safe Circle</b>
-          <span>Peer Counselling Buddies</span>
+        <Link href="/" className="wordmark" aria-label="SafeCounsel home">
+          <b>SafeCounsel</b>
+          <span>for Peer Counselling Buddies</span>
         </Link>
         <nav className="nav" aria-label="Sections">
           {items.map((n) => (
@@ -41,9 +43,9 @@ export function Shell({ children, requires }: { children: React.ReactNode; requi
         <div className="who">
           {s.authenticated ? (
             <>
-              <strong>{s.persona ? PERSONA_LABEL[s.persona].title : "Signed in"}</strong>
+              <strong>{s.name && s.persona !== "student" ? s.name : s.persona ? PERSONA_LABEL[s.persona].title : "Signed in"}</strong>
               {" · "}
-              anonymous <span className="mono">{shortSubject(s.sub)}</span>
+              {s.persona === "student" ? <>others see you as <span className="mono">{s.alias ?? shortSubject(s.sub)}</span></> : s.persona ? PERSONA_LABEL[s.persona].title : ""}
               <button className="btn link" onClick={s.logout}>
                 {s.mode === "rehearsal" ? "Switch" : "Sign out"}
               </button>
@@ -59,8 +61,8 @@ export function Shell({ children, requires }: { children: React.ReactNode; requi
         <Gate requires={requires}>{children}</Gate>
       </main>
       <footer className="colophon">
-        <span>A student-run prototype for Tide UNLOCKED 2026. Not affiliated with or endorsed by Taylor&apos;s University.</span>
-        <span>Identity, tokens, keys and quorum: TideCloak on the Tide network.</span>
+        <span>A student-run prototype for Tide UNLOCKED 2026. Not affiliated with or endorsed by any university.</span>
+        <span>Sign-in, signed roles and note encryption: TideCloak on the Tide network.</span>
       </footer>
     </>
   );
@@ -92,7 +94,7 @@ export function SignIn() {
         <p className="eyebrow">Sign in</p>
         <h2 id="signin">Your Tide key stays with you.</h2>
         <p className="small">
-          Tide checks your password across a network of independent nodes. Safe Circle never sees it, never stores a hash of it,
+          Tide checks your password across a network of independent nodes. SafeCounsel never sees it, never stores a hash of it,
           and only learns a random ID for you.
         </p>
         <button className="btn" onClick={s.login}>Sign in with Tide</button>
@@ -103,12 +105,12 @@ export function SignIn() {
     <section aria-labelledby="signin">
       <p className="eyebrow">Rehearsal sign-in</p>
       <h2 id="signin">Who are you playing?</h2>
-      <p className="small">Four people, one student&apos;s circle. In the live build each is a separate Tide identity.</p>
+      <p className="small">Six people, one student&apos;s case. In the live build each is a separate Tide identity.</p>
       <div className="cards">
-        {PERSONAS.map((p) => (
-          <button key={p} className="card-btn" onClick={() => s.choosePersona(p)}>
-            <b>{PERSONA_LABEL[p].title}</b>
-            <span>{PERSONA_LABEL[p].line}</span>
+        {IDENTITY_KEYS.map((k) => (
+          <button key={k} className="card-btn" onClick={() => s.chooseIdentity(k)}>
+            <b>{IDENTITIES[k].name} · {PERSONA_LABEL[IDENTITIES[k].persona].title}</b>
+            <span>{IDENTITIES[k].line}</span>
           </button>
         ))}
       </div>
@@ -119,4 +121,8 @@ export function SignIn() {
 export function when(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+export function day(iso: string) {
+  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 }

@@ -454,9 +454,12 @@ user_key() {
 echo "==> Creating the PCB cast: $CAST_ADMINS $CAST_USERS"
 for who in $CAST_ADMINS $CAST_USERS; do
   [ -n "$(user_id "$who")" ] && continue
+  # The realm's User Profile requires an email. Use a plus-alias of the operator's own licence
+  # address (delivers to the same inbox), never an invented placeholder.
+  who_email="${ADMIN_EMAIL%@*}+$who@${ADMIN_EMAIL#*@}"
   curl -s -X POST "$TIDECLOAK_URL/admin/realms/$REALM_NAME/users" \
     -H "Authorization: Bearer $(get_token)" -H "Content-Type: application/json" \
-    -d "{\"username\":\"$who\",\"firstName\":\"$who\",\"enabled\":true,\"attributes\":{\"tideInvitable\":[\"true\"]}}" > /dev/null
+    -d "{\"username\":\"$who\",\"email\":\"$who_email\",\"firstName\":\"$who\",\"lastName\":\"PCB\",\"enabled\":true,\"emailVerified\":false,\"attributes\":{\"tideInvitable\":[\"true\"]}}" > /dev/null
 done
 sleep 2
 approve_all_pending

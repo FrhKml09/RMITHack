@@ -6,10 +6,10 @@ import { useSession } from "@/lib/pcb/session";
 import type { Persona } from "@/lib/pcb/personas";
 
 const HOME: Record<Persona, { href: string; label: string }> = {
-  student: { href: "/circle", label: "Open my circle" },
-  buddy: { href: "/desk", label: "Open the buddy desk" },
-  counsellor: { href: "/escalation", label: "Open the escalation desk" },
-  committee: { href: "/ledger", label: "See what the server holds" },
+  student: { href: "/circle", label: "Open my space" },
+  buddy: { href: "/desk", label: "Open my students" },
+  counsellor: { href: "/approvals", label: "Open the approvals queue" },
+  committee: { href: "/admin", label: "Open the admin console" },
 };
 
 export default function Home() {
@@ -18,13 +18,13 @@ export default function Home() {
     <Shell>
       <div className="cols">
         <section>
-          <p className="eyebrow">Peer Counselling Buddies</p>
+          <p className="eyebrow">SafeCounsel · for Peer Counselling Buddies</p>
           <h1 className="display">
-            Break-glass <em>without</em> a master key.
+            Counselling notes <em>nobody</em> can open alone.
           </h1>
           <p className="lede">
-            A student can open up to a trained peer, knowing that no admin, IT person, AI or app can read their
-            story alone, and that help can still reach them on a bad night.
+            A student can open up to a trained peer, knowing no admin, IT person or nosy counsellor can read their story
+            on their own, and that help can still reach them on a bad night.
           </p>
 
           <hr className="rule" />
@@ -39,9 +39,9 @@ export default function Home() {
               blackmailed the patients one by one. One server held everything, so one breach exposed everything.
             </li>
             <li>
-              Safe Circle keeps each student&apos;s notes sealed to the person who wrote them. Anyone else who wants in, even a
-              counsellor in a crisis, needs two of three people to agree, and the Tide network enforces that, not our
-              code.
+              SafeCounsel locks every note on the writer&apos;s device with TideCloak before it is saved. Only the student and
+              their buddy can read it. Anyone else who wants in, even a counsellor in a crisis, needs two people to agree, and
+              the student is told who and why.
             </li>
           </ol>
         </section>
@@ -49,7 +49,7 @@ export default function Home() {
         <aside>
           <div className="rule-card">
             <p className="eyebrow">The one rule</p>
-            <blockquote>Nobody joins a student&apos;s circle alone.</blockquote>
+            <blockquote>Nobody gets into a student&apos;s case alone.</blockquote>
           </div>
           <table className="access" aria-label="Who can read a student's notes">
             <thead>
@@ -60,15 +60,15 @@ export default function Home() {
             </thead>
             <tbody>
               <tr><td>The student</td><td className="yes">Yes</td></tr>
-              <tr><td>Their peer buddy</td><td className="cond">Their own session notes</td></tr>
-              <tr><td>A counsellor, in a crisis</td><td className="cond">Only after 2 of 3 approve</td></tr>
-              <tr><td>A committee member</td><td className="no">No</td></tr>
-              <tr><td>IT, or whoever copies the database</td><td className="no">No</td></tr>
-              <tr><td>Flare, the crisis assistant</td><td className="no">No. It can only ask.</td></tr>
-              <tr><td>Us, the people who built Safe Circle</td><td className="no">No</td></tr>
+              <tr><td>Their assigned peer buddy</td><td className="cond">Yes, until their contract ends</td></tr>
+              <tr><td>A counsellor, when a buddy escalates</td><td className="cond">Only after 2 approve</td></tr>
+              <tr><td>Other counsellors and buddies</td><td className="no">No</td></tr>
+              <tr><td>An admin or committee member</td><td className="no">No. Asking needs 2 counsellors.</td></tr>
+              <tr><td>IT, or whoever copies the database</td><td className="no">Scrambled text only</td></tr>
+              <tr><td>Us, the people who built SafeCounsel</td><td className="no">No</td></tr>
             </tbody>
           </table>
-          <p className="figure-note">Buddies are trained, supervised peers, not counsellors. A registered counsellor is one of the three voters.</p>
+          <p className="figure-note">Buddies are trained, supervised peers, not counsellors. Registered counsellors supervise them and approve escalations.</p>
 
           <div style={{ marginTop: "2rem" }}>
             {s.ready && s.authenticated && s.persona ? (

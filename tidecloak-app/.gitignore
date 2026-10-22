@@ -16,6 +16,7 @@ data/keycloakdb*
 # PCB runtime data (notes ciphertext, receipts) and one-time invite links
 data/pcb/
 data/invite-links.txt
+data/browser-profiles/
 
 # Re-include the template (the repo root ignores .env*)
 !.env.example

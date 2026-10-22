@@ -1,30 +1,33 @@
-import { when } from "./Shell";
-import { PERSONA_LABEL, shortSubject, type Persona } from "@/lib/pcb/personas";
+import { day, when } from "./Shell";
+import type { Persona } from "@/lib/pcb/personas";
 
-export interface ReceiptRow {
-  id: string;
+export interface LogRow {
+  seq: number;
   at: string;
-  actorSub: string;
+  actorName: string;
   actorPersona: Persona | null;
   action: string;
   outcome: "allowed" | "refused" | "pending";
   enforcedBy: "tide" | "app";
+  hash: string;
+  alias?: string;
 }
 
-const OUTCOME: Record<ReceiptRow["outcome"], string> = { allowed: "Allowed", refused: "Refused", pending: "Waiting" };
+const OUTCOME: Record<LogRow["outcome"], string> = { allowed: "Done", refused: "Refused", pending: "Waiting" };
 
-export function Receipts({ rows }: { rows: ReceiptRow[] }) {
+export function Receipts({ rows, showCase = false }: { rows: LogRow[]; showCase?: boolean }) {
   if (rows.length === 0) return <p className="small">No activity yet.</p>;
   return (
     <ul className="receipts">
       {rows.map((r) => (
-        <li key={r.id}>
-          <time dateTime={r.at}>{when(r.at)}</time>
+        <li key={r.seq}>
+          <time dateTime={r.at} title={day(r.at)}>{when(r.at)}</time>
           <span>
             {r.action}
             <span className="by">
-              {r.actorPersona ? PERSONA_LABEL[r.actorPersona].title : "Unknown"} {shortSubject(r.actorSub)} ·{" "}
-              {r.enforcedBy === "tide" ? "enforced by the Tide network" : "logged by Safe Circle"}
+              #{r.seq}
+              {showCase && r.alias ? ` · case ${r.alias}` : ""} · proof <span className="mono">{r.hash.slice(0, 10)}</span> ·{" "}
+              {r.enforcedBy === "tide" ? "Tide-signed identity" : "logged by SafeCounsel"}
             </span>
           </span>
           <span className={`stamp ${r.outcome}`}>{OUTCOME[r.outcome]}</span>

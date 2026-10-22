@@ -178,7 +178,7 @@ table.access td:last-child { text-align: right; font-family: var(--sans); font-s
 .row { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; }
 
 label.field { display: block; font-family: var(--sans); font-size: 13px; color: var(--ink-2); margin-bottom: .4rem; }
-textarea, input[type="text"] {
+textarea, input[type="text"], input[type="date"], select {
   width: 100%;
   font: inherit;
   font-size: 17px;
@@ -193,7 +193,7 @@ textarea, input[type="text"] {
   background-image: repeating-linear-gradient(transparent 0 calc(1.5em + 2px), var(--paper-3) calc(1.5em + 2px) calc(1.5em + 3px));
   background-attachment: local;
 }
-textarea:focus, input[type="text"]:focus { outline: 2px solid var(--clay); outline-offset: 0; }
+textarea:focus, input[type="text"]:focus, input[type="date"]:focus, select:focus { outline: 2px solid var(--clay); outline-offset: 0; }
 
 .toggle { display: flex; gap: .8rem; align-items: flex-start; font-size: 16px; cursor: pointer; }
 .toggle input { width: 20px; height: 20px; margin-top: .2rem; accent-color: var(--clay); }

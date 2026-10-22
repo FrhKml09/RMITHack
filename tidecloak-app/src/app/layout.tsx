@@ -2,8 +2,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata = {
-  title: "Safe Circle — Peer Counselling Buddies",
-  description: "A student can open up to a peer, knowing no admin, IT person or app can read their story alone.",
+  title: "SafeCounsel — for Peer Counselling Buddies",
+  description: "Counselling notes nobody can read or open up alone. Built on TideCloak.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -33,14 +33,14 @@ function Ledger() {
     load();
   }, [load]);
 
-  const target = held?.notes?.filter((n) => n.kind === "journal").at(-1) ?? null;
+  const target = held?.notes?.filter((n) => n.kind !== "session").at(-1) ?? null;
 
   async function tryOpen() {
     if (!target) return;
     setBusy(true);
     setAttempt(null);
     try {
-      const pt = await s.decrypt(target.ciphertext);
+      const pt = await s.decrypt(target.ciphertext, target.circle);
       setAttempt({ ok: true, text: `Opened. This should never happen: ${pt.slice(0, 80)}` });
     } catch (e) {
       setAttempt({ ok: false, text: e instanceof Error ? e.message : String(e) });
@@ -54,8 +54,8 @@ function Ledger() {
       <p className="eyebrow">What the server holds</p>
       <h1 className="page">This is the whole database. Go ahead and read it.</h1>
       <p className="lede">
-        Anyone who runs Safe Circle, or steals a copy of it, gets exactly this. Notes are sealed by the person who wrote them.
-        People appear as random IDs.
+        Anyone who runs SafeCounsel, or steals a copy of it, gets exactly this. Notes are scrambled before they leave the
+        writer&apos;s device. Students appear as pseudonyms.
       </p>
       <hr className="rule" />
       <div className="cols">
@@ -74,8 +74,8 @@ function Ledger() {
           {target ? (
             <>
               <p className="small">
-                Newest journal entry in circle <span className="mono">{shortSubject(target.circle)}</span>. You are signed in as
-                the {s.persona}, with admin rights.
+                Newest student note in case <span className="mono">{shortSubject(target.circle)}</span>. You are signed in as
+                {s.name ?? s.persona}, with admin rights.
               </p>
               <button className="btn danger" onClick={tryOpen} disabled={busy}>
                 {busy ? "Asking the Tide network…" : "Try to decrypt it"}
@@ -85,7 +85,7 @@ function Ledger() {
                   <strong>{attempt.ok ? "Opened" : "Refused"}</strong>
                   {attempt.ok
                     ? attempt.text
-                    : `${s.mode === "tide" ? "The Tide network would not release the key" : "This browser's key did not seal that note"}. ${attempt.text}`}
+                    : `${s.mode === "tide" ? "The Tide network would not release the key" : "The case key is only released to people in the case"}. ${attempt.text} This attempt is now in the access log.`}
                 </div>
               )}
             </>
