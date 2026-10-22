@@ -10,11 +10,12 @@
 
 export const MOCK = true;
 
-const KEY = 'safecircle-mock-v1';
+const KEY = 'safecircle-mock-v2';
 
 // ---------- seed (synthetic only) ----------
 const USERS = [
-  { id: 'aisha', role: 'student', name: 'Aisha Rahman', alias: 'Student Blue-17' },
+  { id: 'aisha', role: 'student', name: 'Aisha Rahman', alias: 'Student Blue-17', info: 'Sophomore · Engineering' },
+  { id: 'farid', role: 'student', name: 'Farid Hakim', alias: 'Student Green-04', info: 'Freshman · Business' },
   { id: 'ben', role: 'buddy', name: 'Ben Ong', title: 'Peer Buddy · Psychology Y3' },
   { id: 'chloe', role: 'buddy', name: 'Chloe Lee', title: 'Peer Buddy · Medicine Y2' },
   { id: 'drlim', role: 'counsellor', name: 'Dr Lim', title: 'Counsellor' },
@@ -31,6 +32,9 @@ function seed() {
       { user: 'aisha', role: 'case-aisha' },
       { user: 'aisha', role: 'identity-aisha' },
       { user: 'ben', role: 'case-aisha' },
+      { user: 'farid', role: 'case-farid' },
+      { user: 'farid', role: 'identity-farid' },
+      { user: 'ben', role: 'case-farid' },
     ],
     activeBuddies: ['ben', 'chloe'],
     notes: [
@@ -40,11 +44,16 @@ function seed() {
         tags: [], plain: 'Talked about joining the study group on Thursdays. Agreed to check in after exams.', cipher: fakeCipher(80) },
       { id: 'n3', caseId: 'aisha', author: 'aisha', at: t - 864e5, title: 'Check-in: exam week coping routine',
         tags: ['Exam Stress'], plain: 'Sleeping badly before the stats exam. Trying the 25-minute study blocks Ben suggested.', cipher: fakeCipher(90) },
+      { id: 'n4', caseId: 'farid', author: 'farid', at: t - 5 * 864e5, title: 'Moving into the hostel',
+        tags: ['Isolation'], plain: 'Homesick most evenings. Would like someone to talk to after classes.', cipher: fakeCipher(70) },
     ],
     requests: [
       { id: 'r0', type: 'assign', caseId: 'aisha', target: 'ben', roles: ['case-aisha'], by: 'admin',
         reason: 'Initial buddy match', at: t - 4 * 864e5, need: { counsellors: 2 },
         votes: [{ by: 'drlim', ok: true, at: t - 4 * 864e5 }, { by: 'mstan', ok: true, at: t - 4 * 864e5 }], status: 'approved' },
+      { id: 'r1', type: 'assign', caseId: 'farid', target: 'ben', roles: ['case-farid'], by: 'admin',
+        reason: 'Initial buddy match', at: t - 6 * 864e5, need: { counsellors: 2 },
+        votes: [{ by: 'drlim', ok: true, at: t - 6 * 864e5 }, { by: 'mstan', ok: true, at: t - 6 * 864e5 }], status: 'approved' },
     ],
     notifications: [
       { id: 'x0', to: 'aisha', at: t - 4 * 864e5, text: 'Ben was approved as your buddy by 2 counsellors. Ben can read your notes and sees you only as Student Blue-17.' },
@@ -85,14 +94,14 @@ function displayFor(viewer, studentId) {
 
 // ---------- auth ----------
 // TIDECLOAK: replace with TideCloak login (IAMService / useTideCloak) and read roles from the token.
-export async function listDemoUsers() { return delay(USERS.map(({ id, role, name, alias }) => ({ id, role, label: role === 'student' ? alias : name }))); }
+export async function listDemoUsers() { return delay(USERS.filter((u) => u.id !== 'farid').map(({ id, role, name, alias }) => ({ id, role, label: role === 'student' ? alias : name }))); }
 export async function login(id) { db.session = id; commit(); return delay(me()); }
 export async function logout() { db.session = null; commit(); return delay(true); }
 export async function getSession() {
   const u = me();
   if (!u) return null;
   // A student sees their own alias in the UI; real name is never shown to others by default.
-  return { id: u.id, role: u.role, displayName: u.role === 'student' ? u.alias : u.name, title: u.title };
+  return { id: u.id, role: u.role, displayName: u.role === 'student' ? u.alias : u.name, firstName: u.name.split(' ')[0], title: u.title };
 }
 
 // ---------- notes ----------
@@ -134,7 +143,7 @@ export async function getAccessPanel(caseId) {
 
 // TIDECLOAK: approved items should come from TideCloak's change-request / audit records (source: 'tidecloak').
 export async function getAccessHistory(caseId) {
-  return delay(db.requests.filter((r) => r.caseId === caseId).sort((a, b) => b.at - a.at).map(view));
+  return delay(db.requests.filter((r) => r.caseId === caseId || r.affects?.includes(caseId)).sort((a, b) => b.at - a.at).map(view));
 }
 
 export async function listNotifications() {
@@ -155,7 +164,12 @@ export async function listMyCases() {
   const u = need('buddy');
   const active = db.activeBuddies.includes(u.id);
   const ids = [...new Set(db.grants.filter((g) => g.user === u.id && g.role.startsWith('case-')).map((g) => g.role.slice(5)))];
-  return delay({ active, cases: active ? ids.map((id) => ({ caseId: id, label: displayFor(u, id), lastAt: Math.max(...db.notes.filter((n) => n.caseId === id).map((n) => n.at), 0) })) : [] });
+  return delay({ active, cases: active ? ids.map((id) => ({ caseId: id, label: displayFor(u, id), info: user(id).info, lastAt: Math.max(...db.notes.filter((n) => n.caseId === id).map((n) => n.at), 0) })) : [] });
+}
+
+export async function listMyEscalations() {
+  const u = need('buddy');
+  return delay(db.requests.filter((r) => r.type === 'escalate' && r.by === u.id).sort((a, b) => b.at - a.at).map(view));
 }
 
 export async function requestEscalation(caseId, reason) {
@@ -171,7 +185,13 @@ export async function requestEscalation(caseId, reason) {
 // TIDECLOAK: change requests + quorum votes. Approving = signing the change request with the counsellor's Tide account.
 function view(r) {
   const cVotes = r.votes.filter((v) => user(v.by).role === 'counsellor');
+  const esc = r.type === 'escalate';
   return {
+    ref: '#' + (parseInt(r.id.replace(/\W/g, ''), 36) % 900 + 100) + '-' + 'ABCDEFGH'[r.id.length % 8],
+    caseInfo: r.caseId ? user(r.caseId).info : null,
+    // Escalation = buddy + 1 counsellor (2 signatures); everything else = N counsellors.
+    have: esc ? r.votes.filter((v) => v.ok).length : cVotes.filter((v) => v.ok).length,
+    total: esc ? 1 + r.need.counsellors : r.need.counsellors,
     ...r,
     caseLabel: r.caseId ? user(r.caseId).alias : null,
     targetName: r.target ? user(r.target).name : null,
@@ -252,6 +272,7 @@ function submit(type, fields) {
 }
 export const requestAssignment = (caseId, buddyId, reason) => submit('assign', { caseId, target: buddyId, roles: ['case-' + caseId], reason });
 export const requestRoleGrant = (userId, role, reason) => submit('role', { caseId: null, target: userId, roles: [role], reason });
-export const requestOffboard = (buddyId, reason) => submit('offboard', { caseId: null, target: buddyId, roles: [], reason });
+export const requestOffboard = (buddyId, reason) => submit('offboard', { caseId: null, target: buddyId, roles: [], reason,
+  affects: db.grants.filter((g) => g.user === buddyId && g.role.startsWith('case-')).map((g) => g.role.slice(5)) });
 
 export function resetDemo() { db = seed(); commit(); }
