@@ -147,6 +147,9 @@ label.field { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color:
 /* login */
 .userpick { display: grid; gap: 8px; }
 [hidden] { display: none !important; }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+a.btn { text-decoration: none; }
 .hero { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 12px; }
 .hero-logo { position: relative; width: 84px; height: 84px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 10px var(--primary-soft); margin-bottom: 8px; }
 .hero-logo .icon { font-size: 38px; }
