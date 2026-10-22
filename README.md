@@ -1,5 +1,7 @@
 # Safe Circle (PCB Safe Space)
 
+**Live UI demo:** https://frhkml09.github.io/RMITHack/frontend/ (synthetic data, mock backend)
+
 A peer-support app for Taylor's University Peer Counselling Buddies, where students talk to trained student buddies under an alias, and no single admin, counsellor, developer or server can read their notes, unmask them, or grant themselves access.
 
 **Vision.** Any student can reach out about depression, family or personal problems without first having to trust one person, or one system, with their story and their name.
